@@ -5,6 +5,21 @@ import untangle
 API_VERSION = '1.1.0'
 
 
+class AuthenticationError(ConnectionError):
+    def __init__(self, msg):
+        super().__init__({msg: msg})
+
+
+class InsufficientPermissionsError(AuthenticationError):
+    def __init__(self, msg):
+        super().__init__({msg: msg})
+
+
+class QVRResponseError(ConnectionError):
+    def __init__(self, msg):
+        super().__init__({msg: msg})
+
+
 class Client(object):
     def __init__(self, user, password, host, protocol='http', port=8080):
         """Initialize QVR client."""
@@ -134,8 +149,11 @@ class Client(object):
                     the actual error message."""
                 self._authenticated = False
                 raise QVRResponseError(resp.content.decode('UTF-8'))
-
-            return resp.json()
+            try:
+                json = resp.json()
+            except requests.exceptions.JSONDecodeError as err:
+                raise QVRResponseError(resp.content.decode('UTF-8'))
+            return json
 
         if content_type == 'image/jpeg':
             return resp.content
@@ -196,18 +214,3 @@ class Client(object):
     def _base_url(self):
         """Get API base URL."""
         return '{}://{}:{}'.format(self._protocol, self._host, self._port)
-
-
-class AuthenticationError(ConnectionError):
-    def __init__(self, msg):
-        super().__init__({msg: msg})
-
-
-class InsufficientPermissionsError(AuthenticationError):
-    def __init__(self, msg):
-        super().__init__({msg: msg})
-
-
-class QVRResponseError(ConnectionError):
-    def __init__(self, msg):
-        super().__init__({msg: msg})
